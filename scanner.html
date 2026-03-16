@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+
+body{
+font-family:Arial;
+text-align:center;
+margin:20px;
+}
+
+#reader{
+width:320px;
+margin:auto;
+}
+
+h2{
+margin-bottom:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>QR Check-In Scanner</h2>
+
+<div id="reader"></div>
+<p id="status">QR кодоо уншуулна уу.</p>
+
+<script>
+
+const statusEl = document.getElementById("status");
+let isSubmitting = false;
+let lastScannedText = "";
+let lastScanAt = 0;
+
+function setStatus(message, color) {
+statusEl.textContent = message;
+statusEl.style.color = color;
+}
+
+function shouldSkipScan(text) {
+const now = Date.now();
+const isDuplicate = text === lastScannedText && now - lastScanAt < 3000;
+
+if (isDuplicate || isSubmitting) {
+return true;
+}
+
+lastScannedText = text;
+lastScanAt = now;
+return false;
+}
+
+function onScanSuccess(text){
+if (shouldSkipScan(text)) {
+return;
+}
+
+isSubmitting = true;
+setStatus("Уншиж байна...", "#444");
+
+fetch("https://script.google.com/macros/s/AKfycbzjCQb7rfn6vfitxsSNu2t8VR_hUe_SyZH9FN7QGhVDjMnCiKqmpigXQO5IFplS2d3stw/exec",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+caseNo:text
+})
+})
+.then(r=>{
+if(!r.ok){
+throw new Error("Request failed");
+}
+
+return r.text();
+})
+.then(res=>{
+if(res=="OK"){
+setStatus("✅ Амжилттай бүртгэгдлээ", "green");
+}
+else if(res=="ALREADY"){
+setStatus("⚠️ Аль хэдийн бүртгэгдсэн", "#d97706");
+}
+else{
+setStatus("❌ Бүртгэл олдсонгүй", "crimson");
+}
+})
+.catch(()=>{
+setStatus("❌ Сүлжээ эсвэл серверийн алдаа гарлаа", "crimson");
+})
+.finally(()=>{
+isSubmitting = false;
+})
+}
+
+new Html5QrcodeScanner(
+
+"reader",
+
+{fps:10,qrbox:250}
+
+).render(onScanSuccess)
+
+</script>
+
+</body>
+
+</html>
+
