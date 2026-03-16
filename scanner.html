@@ -1,18 +1,20 @@
+```html
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-
 body{
 font-family:Arial;
 text-align:center;
 margin:20px;
+background:#fafafa;
+}
+
+h2{
+margin-bottom:20px;
 }
 
 #reader{
@@ -20,12 +22,12 @@ width:320px;
 margin:auto;
 }
 
-h2{
-margin-bottom:20px;
+#status{
+margin-top:20px;
+font-size:18px;
+font-weight:bold;
 }
-
 </style>
-
 </head>
 
 <body>
@@ -33,87 +35,70 @@ margin-bottom:20px;
 <h2>QR Check-In Scanner</h2>
 
 <div id="reader"></div>
-<p id="status">QR кодоо уншуулна уу.</p>
+
+<p id="status">QR кодоо уншуулна уу</p>
 
 <script>
 
-const statusEl = document.getElementById("status");
-let isSubmitting = false;
-let lastScannedText = "";
-let lastScanAt = 0;
+const statusEl = document.getElementById("status")
+let scanner
 
-function setStatus(message, color) {
-statusEl.textContent = message;
-statusEl.style.color = color;
-}
-
-function shouldSkipScan(text) {
-const now = Date.now();
-const isDuplicate = text === lastScannedText && now - lastScanAt < 3000;
-
-if (isDuplicate || isSubmitting) {
-return true;
-}
-
-lastScannedText = text;
-lastScanAt = now;
-return false;
+function setStatus(text,color){
+statusEl.textContent=text
+statusEl.style.color=color
 }
 
 function onScanSuccess(text){
-if (shouldSkipScan(text)) {
-return;
-}
 
-isSubmitting = true;
-setStatus("Уншиж байна...", "#444");
+scanner.pause()
 
-fetch("https://script.google.com/macros/s/AKfycbzjCQb7rfn6vfitxsSNu2t8VR_hUe_SyZH9FN7QGhVDjMnCiKqmpigXQO5IFplS2d3stw/exec",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-caseNo:text
-})
-})
-.then(r=>{
-if(!r.ok){
-throw new Error("Request failed");
-}
+setStatus("Уншиж байна...","#444")
 
-return r.text();
-})
+fetch("https://script.google.com/macros/s/AKfycbzjCQb7rfn6vfitxsSNu2t8VR_hUe_SyZH9FN7QGhVDjMnCiKqmpjgXQO5lFplS2d3stw/exec?caseNo="+text)
+
+.then(r=>r.text())
+
 .then(res=>{
+
 if(res=="OK"){
-setStatus("✅ Амжилттай бүртгэгдлээ", "green");
+setStatus("✅ Амжилттай бүртгэгдлээ","green")
 }
+
 else if(res=="ALREADY"){
-setStatus("⚠️ Аль хэдийн бүртгэгдсэн", "#d97706");
+setStatus("⚠️ Аль хэдийн бүртгэгдсэн","#d97706")
 }
+
 else{
-setStatus("❌ Бүртгэл олдсонгүй", "crimson");
+setStatus("❌ Бүртгэл олдсонгүй","crimson")
 }
+
 })
+
 .catch(()=>{
-setStatus("❌ Сүлжээ эсвэл серверийн алдаа гарлаа", "crimson");
+setStatus("❌ Сүлжээ эсвэл серверийн алдаа","crimson")
 })
+
 .finally(()=>{
-isSubmitting = false;
+setTimeout(()=>{
+scanner.resume()
+},2000)
 })
+
 }
 
-new Html5QrcodeScanner(
-
+scanner = new Html5QrcodeScanner(
 "reader",
+{
+fps:10,
+qrbox:{width:250,height:250},
+rememberLastUsedCamera:true
+}
+)
 
-{fps:10,qrbox:250}
-
-).render(onScanSuccess)
+scanner.render(onScanSuccess)
 
 </script>
 
 </body>
-
 </html>
-
+```
